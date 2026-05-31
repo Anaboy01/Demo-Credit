@@ -117,6 +117,7 @@ DB_NAME=demo_credit
 JWT_SECRET=your_secret_key
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
+ADJUTOR_API_KEY=your_adjutor_api_key
 ```
 
 | Variable                 | Description                          | Default        |
@@ -130,6 +131,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 | `JWT_SECRET`             | Secret for signing access tokens     | — (required)   |
 | `JWT_ACCESS_EXPIRES_IN`  | Access token lifetime                | `15m`          |
 | `JWT_REFRESH_EXPIRES_IN` | Refresh token lifetime               | `7d`           |
+| `ADJUTOR_API_KEY`        | Adjutor Bearer token for Karma lookup | — (required)  |
 
 ## Getting Started
 

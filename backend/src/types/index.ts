@@ -41,6 +41,24 @@ export interface User {
     slug: string;
   }
 
+  export interface KarmaLookupResponse {
+    status?: string;
+    message?: string;
+    data?: {
+      karma_identity: string;
+      amount_in_contention?: string;
+      reason?: string | null;
+      default_date?: string;
+      karma_type?: { karma: string };
+      karma_identity_type?: { identity_type: string };
+      reporting_entity?: { name: string; email: string };
+    };
+    meta?: {
+      cost: number;
+      balance: number;
+    };
+  }
+
   // JWT payload
   export interface AuthPayload {
     userId: string;

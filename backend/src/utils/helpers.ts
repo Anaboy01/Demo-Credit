@@ -29,6 +29,14 @@ export const parseDurationToMs = (duration: string): number => {
 export const expiresAtFromDuration = (duration: string): Date =>
   new Date(Date.now() + parseDurationToMs(duration));
 
+// Adjutor Karma expects international format, e.g. +2348012345678
+export const toKarmaPhone = (phone: string): string => {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("234")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
+  return digits.length > 0 ? `+${digits}` : phone;
+};
+
 // Nigerian Naira formatting
 export const formatNaira = (amount: number): string => {
   return new Intl.NumberFormat("en-NG", {

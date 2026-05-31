@@ -9,6 +9,7 @@ import {
   hashToken,
   expiresAtFromDuration,
 } from "../utils/helpers";
+import { isRegistrationBlocked } from "../services/karma.service";
 import { User } from "../types";
 
 const signAccessToken = (user: Pick<User, "id" | "email">): string =>
@@ -130,6 +131,21 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (existing.length > 0) {
     res.status(409);
     throw new Error("Email or phone number already registered.");
+  }
+
+  try {
+    if (await isRegistrationBlocked(email, phone)) {
+      res.status(403);
+      throw new Error(
+        "Registration denied. This identity is not eligible for onboarding."
+      );
+    }
+  } catch (error) {
+    if (res.statusCode === 403) throw error;
+    res.status(503);
+    throw new Error(
+      "Unable to complete identity verification. Please try again later."
+    );
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
