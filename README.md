@@ -64,7 +64,7 @@ erDiagram
 
     wallets {
         string id PK
-        string user_id FK UK
+        string user_id FK
         decimal balance
         datetime updated_at
     }
