@@ -9,15 +9,15 @@ Node.js / Express 5 backend for a lending MVP wallet: user onboarding with ident
 ```mermaid
 flowchart TB
     subgraph Client
-        APP[Mobile / Web Client]
+        APP["Mobile / Web Client"]
     end
 
     subgraph API["Express API (backend/src)"]
         APP -->|HTTP JSON| ROUTES
 
         subgraph Middleware
-            JSON[express.json]
-            AUTH_MW[protect middleware]
+            JSON["express.json"]
+            AUTH_MW["protect middleware"]
             ERR[errorHandler]
         end
 
@@ -25,9 +25,9 @@ flowchart TB
         JSON --> AUTH_MW
 
         subgraph Routes
-            AUTH_R[/api/auth]
-            WALLET_R[/api/wallet]
-            TXN_R[/api/transactions]
+            AUTH_R["/api/auth"]
+            WALLET_R["/api/wallet"]
+            TXN_R["/api/transactions"]
         end
 
         AUTH_MW --> WALLET_R
@@ -60,7 +60,7 @@ flowchart TB
         MYSQL[(MySQL)]
     end
 
-    KARMA -->|GET /v2/verification/karma/{identity}| ADJUTOR
+    KARMA -->|"GET karma by identity"| ADJUTOR
     AUTH_C --> MYSQL
     WALLET_C --> MYSQL
     TXN_C --> MYSQL
@@ -113,7 +113,7 @@ sequenceDiagram
 
     C->>E: HTTP request
     E->>E: express.json()
-    alt Protected route (/wallet, /transactions, /auth/logout)
+    alt Protected route
         E->>M: protect()
         M->>M: Verify JWT signature
         M->>D: Check token_blacklist
@@ -122,7 +122,7 @@ sequenceDiagram
         else Valid
             M->>H: req.user = { userId, email }
         end
-    else Public route (/auth/register, /login, /refresh)
+    else Public route
         E->>H: Direct
     end
     H->>H: Validate body / query
@@ -216,15 +216,15 @@ sequenceDiagram
     participant H as helpers
     participant A as Adjutor API
 
-    C->>AC: POST /register { email, phone, ... }
+    C->>AC: POST register
     AC->>AC: Check local duplicate email/phone
     AC->>KS: isRegistrationBlocked(email, phone)
 
     par Parallel lookups
-        KS->>A: GET /karma/{email}
+        KS->>A: GET karma by email
         KS->>H: toKarmaPhone(phone)
-        H-->>KS: +2348012345678
-        KS->>A: GET /karma/{+234...}
+        H-->>KS: normalized phone
+        KS->>A: GET karma by phone
     end
 
     A-->>KS: KarmaLookupResponse
@@ -281,12 +281,12 @@ Each user has exactly **one wallet** (1:1 with `users`, created atomically at re
 
 ```mermaid
 flowchart TB
-    subgraph Wallet API["/api/wallet · all require protect"]
-        BAL[GET /balance]
-        FUND[POST /fund]
-        SEND[POST /send]
-        BANKS[GET /banks]
-        WDR[POST /withdraw]
+    subgraph WalletAPI["Wallet routes - protect required"]
+        BAL["GET balance"]
+        FUND["POST fund"]
+        SEND["POST send"]
+        BANKS["GET banks"]
+        WDR["POST withdraw"]
     end
 
     BAL --> R1[SELECT balance FROM wallets]
