@@ -5,6 +5,7 @@ A Node.js wallet service built for the Demo Credit lending MVP. Users can regist
 ## Features
 
 - **User registration & login** — JWT access tokens with refresh-token rotation and logout blacklisting
+- **Karma blacklisting** — Registration blocked when email or phone appears on Adjutor Karma
 - **Wallet funding** — Direct top-up endpoint (simulated; production would use a payment gateway callback)
 - **Peer-to-peer transfers** — Send funds to another user by phone number
 - **Withdrawals** — Debit wallet and record payout to eligible banks (UBA, OPay, PalmPay)
@@ -32,7 +33,7 @@ backend/
 │   ├── db/migrations/   # Knex schema migrations
 │   ├── middlewares/     # Auth & error handling
 │   ├── routes/          # Express route definitions
-│   ├── services/        # External/domain services (banks)
+│   ├── services/        # External/domain services (banks, Karma)
 │   ├── types/           # Shared TypeScript interfaces
 │   ├── utils/           # Helpers (IDs, references, token hashing)
 │   ├── app.ts           # Express app setup
@@ -133,6 +134,24 @@ ADJUTOR_API_KEY=your_adjutor_api_key
 | `JWT_REFRESH_EXPIRES_IN` | Refresh token lifetime               | `7d`           |
 | `ADJUTOR_API_KEY`        | Adjutor Bearer token for Karma lookup | — (required)  |
 
+> `ADJUTOR_API_KEY` can also be supplied as `API_KEY` for backward compatibility.
+
+## Karma Blacklisting
+
+Before a new account is created, the registration flow checks the submitted **email** and **phone** against [Adjutor Karma](https://adjutor.lendsqr.com) (`GET /v2/verification/karma/{identity}`). If either identity returns a successful Karma hit, registration is rejected.
+
+**Flow:**
+
+1. User submits registration details.
+2. The API checks for duplicate email/phone in the local database.
+3. Email and phone are looked up in parallel via Adjutor Karma.
+4. Phone numbers are normalized to international format (e.g. `08012345678` → `+2348012345678`) before lookup.
+5. If either lookup is a Karma hit → **403** (registration denied).
+6. If the Karma service is unavailable or misconfigured → **503** (verification could not be completed).
+7. If both lookups pass → account and wallet are created as usual.
+
+A Karma **hit** is when Adjutor responds with `status: "success"`, `message: "Successful"`, and a non-empty `data` payload. A **404** or empty response is treated as clear (not blacklisted).
+
 ## Getting Started
 
 ### 1. Install dependencies
@@ -182,7 +201,7 @@ Authorization: Bearer <access_token>
 
 **Flow:**
 
-1. `POST /api/auth/register` — create account (wallet is created automatically)
+1. `POST /api/auth/register` — create account after Karma verification (wallet is created automatically)
 2. `POST /api/auth/login` — receive `token` (access) and `refreshToken`
 3. Use `token` on protected endpoints
 4. `POST /api/auth/refresh` — exchange `refreshToken` for new tokens (rotation)
@@ -235,6 +254,22 @@ Base URL: `/api`
     "email": "jane@example.com",
     "phone": "08012345678"
   }
+}
+```
+
+**Response `403`** — email or phone flagged on Adjutor Karma:
+
+```json
+{
+  "message": "Registration denied. This identity is not eligible for onboarding."
+}
+```
+
+**Response `503`** — Adjutor Karma lookup failed (network, invalid API key, or service error):
+
+```json
+{
+  "message": "Unable to complete identity verification. Please try again later."
 }
 ```
 
@@ -445,8 +480,10 @@ Errors return JSON with a `message` field. Status codes follow HTTP conventions:
 | ---- | ------------------------------------------ |
 | 400  | Validation error, insufficient balance     |
 | 401  | Missing, invalid, or blacklisted token     |
+| 403  | Registration denied (Karma blacklisted identity) |
 | 404  | User, wallet, or recipient not found       |
 | 409  | Email or phone already registered          |
+| 503  | Adjutor Karma verification unavailable     |
 | 500  | Unexpected server error                    |
 
 Example:
@@ -459,6 +496,7 @@ Example:
 
 ## Design Notes
 
+- **Karma gate at signup** — Registration calls Adjutor Karma for both email and phone before any user row is written; blacklisted identities never reach the database.
 - **One wallet per user** — Created atomically during registration inside a DB transaction.
 - **Transfer safety** — Sender balance is locked with `SELECT ... FOR UPDATE` before debit to prevent race conditions.
 - **Double-entry ledger** — Transfers write both a debit and credit row sharing the same `reference`.
