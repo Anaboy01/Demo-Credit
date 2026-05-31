@@ -120,19 +120,19 @@ sequenceDiagram
         alt Blacklisted or invalid
             M-->>C: 401
         else Valid
-            M->>H: req.user = { userId, email }
+            M->>H: attach req.user
         end
     else Public route
         E->>H: Direct
     end
-    H->>H: Validate body / query
-    opt External check (register only)
+    H->>H: Validate body and query
+    opt Register only
         H->>S: isRegistrationBlocked()
         S->>S: Adjutor Karma API
     end
-    H->>D: Query / transaction
+    H->>D: Query or transaction
     H-->>C: JSON response
-    Note over E: On thrown Error → errorHandler → { message }
+    Note over E: Errors handled by errorHandler
 ```
 
 Every controller uses `express-async-handler`. Controllers set `res.status()` before throwing; `errorHandler` reads that status and returns `{ message }` (plus stack in development).
@@ -155,34 +155,34 @@ JWT-based auth with **short-lived access tokens** and **rotating refresh tokens*
 ```mermaid
 flowchart LR
     subgraph Register["POST /api/auth/register"]
-        R1[Validate fields] --> R2[Duplicate email/phone?]
+        R1[Validate fields] --> R2["Duplicate email or phone"]
         R2 -->|409| R_FAIL[Reject]
         R2 --> R3[Karma check]
-        R3 -->|403| R_KARMA[Reject — blacklisted]
-        R3 -->|503| R_SVC[Karma unavailable]
-        R3 -->|pass| R4[bcrypt hash password]
-        R4 --> R5["DB transaction: users + wallets"]
-        R5 --> R_OK[201 Created]
+        R3 -->|403| R_KARMA["Reject blacklisted"]
+        R3 -->|503| R_SVC["Karma unavailable"]
+        R3 -->|pass| R4["bcrypt hash password"]
+        R4 --> R5["DB transaction users and wallets"]
+        R5 --> R_OK["201 Created"]
     end
 
     subgraph Login["POST /api/auth/login"]
-        L1[Find user by email] --> L2[bcrypt.compare]
+        L1["Find user by email"] --> L2[bcrypt.compare]
         L2 -->|fail| L_FAIL[401]
         L2 --> L3[issueAuthTokens]
-        L3 --> L_OK[200 + token + refreshToken]
+        L3 --> L_OK["200 tokens issued"]
     end
 
     subgraph Refresh["POST /api/auth/refresh"]
-        RF1[Hash refreshToken] --> RF2[Lookup refresh_tokens]
-        RF2 -->|missing / expired| RF_FAIL[401]
-        RF2 --> RF3[Delete old refresh row]
-        RF3 --> RF4[Issue new access + refresh]
+        RF1["Hash refreshToken"] --> RF2["Lookup refresh_tokens"]
+        RF2 -->|"missing or expired"| RF_FAIL[401]
+        RF2 --> RF3["Delete old refresh row"]
+        RF3 --> RF4["Issue new access and refresh"]
         RF4 --> RF_OK[200]
     end
 
-    subgraph Logout["POST /api/auth/logout · protect"]
-        LO1[Decode access token exp] --> LO2[Insert token_blacklist]
-        LO2 --> LO3[Delete refresh token(s)]
+    subgraph Logout["POST /api/auth/logout protect"]
+        LO1["Decode access token exp"] --> LO2["Insert token_blacklist"]
+        LO2 --> LO3["Delete refresh tokens"]
         LO3 --> LO_OK[200]
     end
 ```
@@ -197,7 +197,7 @@ flowchart TD
     C -->|Invalid / expired| E401b[401 Invalid token]
     C --> D[Query token_blacklist by raw token]
     D -->|Found| E401c[401 Token invalidated]
-    D -->|Not found| OK[req.user attached → next]
+    D -->|Not found| OK["req.user attached then next"]
 ```
 
 Logout blacklists the **raw access token** until its natural expiry (`expired_at` from JWT `exp`). Refresh rotation deletes the used refresh hash before issuing a new pair, limiting replay.
@@ -229,13 +229,13 @@ sequenceDiagram
 
     A-->>KS: KarmaLookupResponse
 
-    alt status=success AND message=Successful AND data present
-        KS-->>AC: true (blocked)
+    alt Karma hit
+        KS-->>AC: true blocked
         AC-->>C: 403 Registration denied
-    else Adjutor error / network / bad API key
+    else Adjutor or network error
         KS-->>AC: throws
         AC-->>C: 503 Verification unavailable
-    else 404 or empty (clear)
+    else Clear identity
         KS-->>AC: false
         AC->>AC: Create user + wallet in DB transaction
         AC-->>C: 201 Created
@@ -290,10 +290,10 @@ flowchart TB
     end
 
     BAL --> R1[SELECT balance FROM wallets]
-    FUND --> T1["Transaction: increment balance + credit txn"]
-    SEND --> T2["Transaction: FOR UPDATE sender → debit/credit pair"]
-    BANKS --> BS[bank.service static list]
-    WDR --> T3["Transaction: FOR UPDATE → decrement + debit txn"]
+    FUND --> T1["Transaction increment balance and credit txn"]
+    SEND --> T2["Transaction FOR UPDATE sender debit and credit"]
+    BANKS --> BS["bank.service static list"]
+    WDR --> T3["Transaction FOR UPDATE decrement and debit"]
     WDR --> BS
     WDR --> NUBAN[isValidNuban]
 ```
@@ -344,29 +344,29 @@ erDiagram
 
     users {
         string id PK
-        string email UK
-        string phone UK
+        string email
+        string phone
         string password
     }
 
     wallets {
         string id PK
-        string user_id FK UK
+        string user_id FK
         decimal balance
     }
 
     transactions {
         string id PK
-        string sender_id FK "nullable for top-up"
+        string sender_id FK
         string receiver_id FK
         decimal amount
-        enum type "credit | debit"
+        string type
         string reference
-        enum status "pending | success | failed"
+        string status
     }
 
     refresh_tokens {
-        string token_hash UK
+        string token_hash
         datetime expires_at
     }
 
