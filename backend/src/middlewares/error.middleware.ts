@@ -7,7 +7,9 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  console.error("🔴 Error:", err.message);
+  if (process.env.NODE_ENV !== "test") {
+    console.error("🔴 Error:", err.message);
+  }
 
   const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
 
