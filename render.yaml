@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: demo-credit-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm build
+    startCommand: pnpm start
