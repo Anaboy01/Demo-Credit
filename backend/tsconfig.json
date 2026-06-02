@@ -8,5 +8,11 @@
     "esModuleInterop": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/db/migrations"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/db/migrations",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts"
+  ]
 }
