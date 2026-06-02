@@ -3,5 +3,5 @@ services:
     name: demo-credit-backend
     runtime: node
     rootDir: backend
-    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm build
+    buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm build && pnpm migrate
     startCommand: pnpm start
