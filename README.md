@@ -10,6 +10,7 @@ A Node.js wallet service built for the Demo Credit lending MVP. Users can regist
 - **Peer-to-peer transfers** — Send funds to another user by phone number
 - **Withdrawals** — Debit wallet and record payout to eligible banks (UBA, OPay, PalmPay)
 - **Transaction history** — Paginated ledger with optional credit/debit filtering
+- **Admin read APIs** — List all users, wallets (with owner name), and transactions (unauthenticated; for internal/demo use)
 - **Transactional integrity** — Transfers and withdrawals use database transactions with row-level locking (`FOR UPDATE`)
 
 ## Tech Stack
@@ -29,7 +30,7 @@ A Node.js wallet service built for the Demo Credit lending MVP. Users can regist
 backend/
 ├── src/
 │   ├── config/          # Database & Knex configuration
-│   ├── controllers/     # Route handlers (auth, wallet, transactions)
+│   ├── controllers/     # Route handlers (auth, wallet, transactions, admin)
 │   ├── db/migrations/   # Knex schema migrations
 │   ├── middlewares/     # Auth & error handling
 │   ├── routes/          # Express route definitions
@@ -471,6 +472,91 @@ Account number must be a valid 10-digit NUBAN.
   }
 }
 ```
+
+---
+
+### Admin
+
+Read-only endpoints for listing all records across the platform. No authentication required (intended for local/demo use).
+
+#### List all users
+
+`GET /api/admin/users`
+
+**Response `200`**
+
+```json
+{
+  "users": [
+    {
+      "id": "uuid",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "phone": "08012345678",
+      "created_at": "2026-05-31T10:00:00.000Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+Passwords are never included in the response.
+
+#### List all wallets
+
+`GET /api/admin/wallets`
+
+**Response `200`**
+
+```json
+{
+  "wallets": [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "user_name": "Jane Doe",
+      "user_email": "jane@example.com",
+      "user_phone": "08012345678",
+      "balance": "15000.50",
+      "updated_at": "2026-05-31T10:00:00.000Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+Each wallet row includes the owner's `user_name`, `user_email`, and `user_phone`.
+
+#### List all transactions
+
+`GET /api/admin/transactions`
+
+**Response `200`**
+
+```json
+{
+  "transactions": [
+    {
+      "id": "uuid",
+      "amount": "5000.00",
+      "type": "credit",
+      "description": "Wallet top-up",
+      "reference": "TXN-uuid",
+      "status": "success",
+      "created_at": "2026-05-31T10:00:00.000Z",
+      "sender_id": null,
+      "receiver_id": "uuid",
+      "sender_name": null,
+      "sender_phone": null,
+      "receiver_name": "Jane Doe",
+      "receiver_phone": "08012345678"
+    }
+  ],
+  "total": 1
+}
+```
+
+Returns the full ledger with sender and receiver names and phone numbers where available.
 
 ## Error Responses
 
