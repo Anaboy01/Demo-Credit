@@ -10,7 +10,7 @@ A Node.js wallet service built for the Demo Credit lending MVP. Users can regist
 - **Peer-to-peer transfers** — Send funds to another user by phone number
 - **Withdrawals** — Debit wallet and record payout to eligible banks (UBA, OPay, PalmPay)
 - **Transaction history** — Paginated ledger with optional credit/debit filtering
-- **Admin read APIs** — List all users, wallets (with owner name), and transactions (unauthenticated; for internal/demo use)
+- **Internal read APIs** — List all users, wallets (with owner name), and transactions (unauthenticated; for internal/demo use)
 - **Transactional integrity** — Transfers and withdrawals use database transactions with row-level locking (`FOR UPDATE`)
 
 ## Tech Stack
@@ -30,7 +30,7 @@ A Node.js wallet service built for the Demo Credit lending MVP. Users can regist
 backend/
 ├── src/
 │   ├── config/          # Database & Knex configuration
-│   ├── controllers/     # Route handlers (auth, wallet, transactions, admin)
+│   ├── controllers/     # Route handlers (auth, wallet, transactions, internal)
 │   ├── db/migrations/   # Knex schema migrations
 │   ├── middlewares/     # Auth & error handling
 │   ├── routes/          # Express route definitions
@@ -475,13 +475,13 @@ Account number must be a valid 10-digit NUBAN.
 
 ---
 
-### Admin
+### Internal
 
 Read-only endpoints for listing all records across the platform. No authentication required (intended for local/demo use).
 
 #### List all users
 
-`GET /api/admin/users`
+`GET /api/internal/users`
 
 **Response `200`**
 
@@ -504,7 +504,7 @@ Passwords are never included in the response.
 
 #### List all wallets
 
-`GET /api/admin/wallets`
+`GET /api/internal/wallets`
 
 **Response `200`**
 
@@ -529,7 +529,7 @@ Each wallet row includes the owner's `user_name`, `user_email`, and `user_phone`
 
 #### List all transactions
 
-`GET /api/admin/transactions`
+`GET /api/internal/transactions`
 
 **Response `200`**
 

@@ -3,7 +3,7 @@ import {
   getAllUsers,
   getAllWallets,
   getAllTransactions,
-} from "../controllers/admin.controller";
+} from "../controllers/internal.controller";
 
 const router = Router();
 
